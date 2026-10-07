@@ -73,15 +73,17 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     self.a_desired_trajectory = np.zeros(CONTROL_N)
     self.j_desired_trajectory = np.zeros(CONTROL_N)
 
-  def update(self, sm):
+      def update(self, sm):
     LongitudinalPlannerSP.update(self, sm)
     # Custom Stop Sign and Traffic Light Hold Logic
-        STOP_HOLD_THRESHOLD_MS = 0.2  # Speed threshold (~0.7 km/h) to consider fully stopped
-
-        if getattr(self, 'stop_sign_detected', False) or getattr(self, 'traffic_light_state', '') == 'RED':
-            if self.v_desired < STOP_HOLD_THRESHOLD_MS:
-                v_target = 0.0
-                self.a_desired = min(self.a_desired, -0.5)  # Apply gentle hold braking pressure
+    STOP_HOLD_THRESHOLD_MS = 0.2  # Speed threshold (~0.7 km/h) to consider fully stopped
+    if getattr(self, 'stop_sign_detected', False) or getattr(self, 'traffic_light_state', '') == 'RED':
+      if getattr(self, 'v_desired', 0.0) < STOP_HOLD_THRESHOLD_MS:
+        v_target = 0.0
+        self.a_desired = min(getattr(self, 'a_desired', 0.0), -0.5)  # Apply gentle hold braking pressure
+    
+            
+                 
     if len(sm['carControl'].orientationNED) == 3:
       accel_coast = get_coast_accel(sm['carControl'].orientationNED[1])
     else:
