@@ -73,30 +73,19 @@ class LongitudinalPlannerSP:
     self.output_v_target, self.output_a_target = targets[self.source]
     return self.output_v_target, self.output_a_target
 
-  def update(self, sm: messaging.SubMaster) -> None:
-    self.events_sp.clear()
-    self.dec.update(sm)
-    self.e2e_alerts_helper.update(sm, self.events_sp)
-
-  def publish_longitudinal_plan_sp(self, sm: messaging.SubMaster, pm: messaging.PubMaster) -> None:
+def publish_longitudinal_plan_sp(self, sm: messaging.SubMaster, pm: messaging.PubMaster) -> None:
     plan_sp_send = messaging.new_message('longitudinalPlanSP')
 
     plan_sp_send.valid = sm.all_checks(service_list=['carState', 'controlsState'])
 
     longitudinalPlanSP = plan_sp_send.longitudinalPlanSP
     longitudinalPlanSP.longitudinalPlanSource = self.source
-    # Custom stop sign & traffic light hold logic
-        if self.experimental_mode and sm.updated['modelV2']:
-            if self.output_v_target < 1.0:
-                self.output_v_target = 0.0
-    longitudinalPlanSP.vTarget = float(self.output_v_target)
-    
-    longitudinalPlanSP = plan_sp_send.longitudinalPlanSP
-    longitudinalPlanSP.longitudinalPlanSource = self.source
     
     # Custom stop sign & traffic light hold logic
-    if self.experimental_mode and sm.updated['modelV2']:
-      if self.output_v_target < 1.0:
+    if self.is_e2e(sm) and sm.updated['modelV2']:
+ 8   
+     
+     if self.output_v_target < 1.0:
         self.output_v_target = 0.0
 
     longitudinalPlanSP.vTarget = float(self.output_v_target)
@@ -106,13 +95,21 @@ class LongitudinalPlannerSP:
     # Dynamic Experimental Control
     dec = longitudinalPlanSP.dec
     dec.state = DecState.blended if self.dec.mode() == 'blended' else DecState.acc
-   # longitudinalPlanSP.vTarget = float(self.output_v_target)
-   # longitudinalPlanSP.aTarget = float(self.output_a_target)
-   # longitudinalPlanSP.events = self.events_sp.to_msg() 
+    dec.enabled = self.dec.enabled()
+    dec.active = self.dec.active()
+
+    # Smart Cruise Control
+    smartCruiseControl = longitudinalPlanSP.smartCruiseControl
+    # Vision Control
+    sccVision = smartCruiseControl.vision
     
-    # Dynamic Experimental Control
-    # dec = longitudinalPlanSP.dec
-    #  dec.state = DecState.blended if self.dec.mode() == 'blended' else DecState.acc
+   
+   
+
+    
+
+
+  
     
     dec.enabled = self.dec.enabled()
     dec.active = self.dec.active()
