@@ -82,10 +82,11 @@ def publish_longitudinal_plan_sp(self, sm: messaging.SubMaster, pm: messaging.Pu
     longitudinalPlanSP.longitudinalPlanSource = self.source
     
     # Custom stop sign & traffic light hold logic
+    
     if self.is_e2e(sm) and sm.updated['modelV2']:
- 8   
+  
      
-     if self.output_v_target < 1.0:
+    if self.output_v_target < 1.0:
         self.output_v_target = 0.0
 
     longitudinalPlanSP.vTarget = float(self.output_v_target)
