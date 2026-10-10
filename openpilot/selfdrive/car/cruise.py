@@ -77,7 +77,17 @@ class VCruiseHelper(VCruiseHelperSP):
     # would have the effect of both enabling and changing speed is checked after the state transition
     if not enabled:
       return
+ if button_type is None:
+      return
 
+    # Don't adjust speed when pressing resume to exit standstill
+    cruise_standstill = self.button_change_states[button_type]["standstill"] or CS.cruiseState.standstill
+    if button_type == ButtonType.accelCruise and cruise_standstill:
+      return
+
+    # Don't adjust speed if we've enabled since the button was depressed (some ports enable on rising edge)
+    if not self.button_change_states[button_type]["enabled"]:
+      return
     long_press = False
     button_type = None
 
