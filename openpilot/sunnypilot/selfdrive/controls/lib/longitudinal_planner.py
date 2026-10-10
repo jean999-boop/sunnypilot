@@ -90,12 +90,30 @@ class LongitudinalPlannerSP:
             if self.output_v_target < 1.0:
                 self.output_v_target = 0.0
     longitudinalPlanSP.vTarget = float(self.output_v_target)
+    
+    longitudinalPlanSP = plan_sp_send.longitudinalPlanSP
+    longitudinalPlanSP.longitudinalPlanSource = self.source
+    
+    # Custom stop sign & traffic light hold logic
+    if self.experimental_mode and sm.updated['modelV2']:
+      if self.output_v_target < 1.0:
+        self.output_v_target = 0.0
+
     longitudinalPlanSP.vTarget = float(self.output_v_target)
     longitudinalPlanSP.aTarget = float(self.output_a_target)
-    longitudinalPlanSP.events = self.events_sp.to_msg()                                    
+    longitudinalPlanSP.events = self.events_sp.to_msg()
+    
     # Dynamic Experimental Control
     dec = longitudinalPlanSP.dec
     dec.state = DecState.blended if self.dec.mode() == 'blended' else DecState.acc
+   # longitudinalPlanSP.vTarget = float(self.output_v_target)
+   # longitudinalPlanSP.aTarget = float(self.output_a_target)
+   # longitudinalPlanSP.events = self.events_sp.to_msg() 
+    
+    # Dynamic Experimental Control
+    # dec = longitudinalPlanSP.dec
+    #  dec.state = DecState.blended if self.dec.mode() == 'blended' else DecState.acc
+    
     dec.enabled = self.dec.enabled()
     dec.active = self.dec.active()
 
