@@ -71,23 +71,13 @@ class VCruiseHelper(VCruiseHelperSP):
 
     if not self.CP.pcmCruise or not self.CP_SP.pcmCruiseSpeed:
       self.update_button_timers(CS, enabled)
-
-  def _update_v_cruise_non_pcm(self, CS, enabled, is_metric):
+      
+      def _update_v_cruise_non_pcm(self, CS, enabled, is_metric):
     # handle button presses. TODO: this should be in state_control, but a decelCruise press
     # would have the effect of both enabling and changing speed is checked after the state transition
     if not enabled:
       return
- if button_type is None:
-      return
 
-    # Don't adjust speed when pressing resume to exit standstill
-    cruise_standstill = self.button_change_states[button_type]["standstill"] or CS.cruiseState.standstill
-    if button_type == ButtonType.accelCruise and cruise_standstill:
-      return
-
-    # Don't adjust speed if we've enabled since the button was depressed (some ports enable on rising edge)
-    if not self.button_change_states[button_type]["enabled"]:
-      return
     long_press = False
     button_type = None
 
@@ -119,22 +109,96 @@ class VCruiseHelper(VCruiseHelperSP):
       return
 
     # Speed Limit Assist for Non PCM long cars.
-    # True: Disallow set speed changes when user confirmed the target set speed during preActive state
-    # False: Allow set speed changes as SLA is not requesting user confirmation
     if self.update_speed_limit_assist_pre_active_confirmed(button_type):
       return
 
     long_press, v_cruise_delta = VCruiseHelperSP.update_v_cruise_delta(self, long_press, v_cruise_delta)
-    if long_press and self.v_cruise_kph % v_cruise_delta != 0:  # partial interval
-      self.v_cruise_kph = CRUISE_NEAREST_FUNC[button_type](self.v_cruise_kph / v_cruise_delta) * v_cruise_delta
+
+    # =========================================================
+    # CUSTOM SPEED SNAP MODIFICATION:
+    # Quick tap on accel/decel snaps directly to speed limit + 3
+    # =========================================================
+    speed_limit_kph = getattr(self, 'v_speed_limit_kph', 0)
+    if not long_press and button_type in (ButtonType.accelCruise, ButtonType.decelCruise) and speed_limit_kph and speed_limit_kph > 0:
+      self.v_cruise_kph = speed_limit_kph + 3
     else:
-      self.v_cruise_kph += v_cruise_delta * CRUISE_INTERVAL_SIGN[button_type]
+      # Standard incremental behavior for long presses or when no speed limit is found
+      if long_press and self.v_cruise_kph % v_cruise_delta != 0:  # partial interval
+        self.v_cruise_kph = CRUISE_NEAREST_FUNC[button_type](self.v_cruise_kph / v_cruise_delta) * v_cruise_delta
+      else:
+        self.v_cruise_kph += v_cruise_delta * CRUISE_INTERVAL_SIGN[button_type]
 
     # If set is pressed while overriding, clip cruise speed to minimum of vEgo
     if CS.gasPressed and button_type in (ButtonType.decelCruise, ButtonType.setCruise):
       self.v_cruise_kph = max(self.v_cruise_kph, CS.vEgo * CV.MS_TO_KPH)
 
     self.v_cruise_kph = np.clip(round(self.v_cruise_kph, 1), self.v_cruise_min, V_CRUISE_MAX)
+                                
+    # === OLD CODE MARKER START ===
+    # old  def _update_v_cruise_non_pcm(self, CS, enabled, is_metric):
+    # old    # handle button presses. TODO: this should be in state_control, but a decelCruise press
+    # old would have the effect of both enabling and changing speed is checked after the state transition
+    # old if not enabled:
+    # old   return
+    # old if button_type is None:
+    # old  return
+
+    # old Don't adjust speed when pressing resume to exit standstill
+    # old cruise_standstill = self.button_change_states[button_type]["standstill"] or CS.cruiseState.standstill
+    # old  if button_type == ButtonType.accelCruise and cruise_standstill:
+    # old   return
+
+  
+    # old cruise_standstill = self.button_change_states[button_type]["standstill"] or CS.cruiseState.standstill
+    # old if button_type == ButtonType.accelCruise and cruise_standstill:  
+    # old Don't adjust speed if we've enabled since the button was depressed (some ports enable on rising edge)
+    # old if not self.button_change_states[button_type]["enabled"]:
+    # old  return
+    # old long_press = False
+    # old button_type = None
+
+    # old v_cruise_delta = 1. if is_metric else IMPERIAL_INCREMENT
+
+    # old for b in CS.buttonEvents:
+    # old  if b.type.raw in self.button_timers and not b.pressed:
+    # old    if self.button_timers[b.type.raw] > CRUISE_LONG_PRESS:
+    # old      return  # end long press
+    # old   button_type = b.type.raw
+    # old   break
+    # old else:
+    # old for k, timer in self.button_timers.items():
+    # old  if timer and timer % CRUISE_LONG_PRESS == 0:
+    # old       button_type = k
+    # old      long_press = True
+    # old     break
+
+    # old if button_type is None:
+    # old  return
+
+    # old Don't adjust speed when pressing resume to exit standstill
+    # old  return
+
+    # old Don't adjust speed if we've enabled since the button was depressed (some ports enable on rising edge)
+    # old if not self.button_change_states[button_type]["enabled"]:
+    # old  return
+
+    # old Speed Limit Assist for Non PCM long cars.
+    # old True: Disallow set speed changes when user confirmed the target set speed during preActive state
+    # old False: Allow set speed changes as SLA is not requesting user confirmation
+    # old if self.update_speed_limit_assist_pre_active_confirmed(button_type):
+    # old  return
+
+    # old long_press, v_cruise_delta = VCruiseHelperSP.update_v_cruise_delta(self, long_press, v_cruise_delta)
+    # old if long_press and self.v_cruise_kph % v_cruise_delta != 0:  # partial interval
+    # old  self.v_cruise_kph = CRUISE_NEAREST_FUNC[button_type](self.v_cruise_kph / v_cruise_delta) * v_cruise_delta
+    # old else:
+    # old  self.v_cruise_kph += v_cruise_delta * CRUISE_INTERVAL_SIGN[button_type]
+
+    # old If set is pressed while overriding, clip cruise speed to minimum of vEgo
+    # old if CS.gasPressed and button_type in (ButtonType.decelCruise, ButtonType.setCruise):
+    # old  self.v_cruise_kph = max(self.v_cruise_kph, CS.vEgo * CV.MS_TO_KPH)
+
+    # old self.v_cruise_kph = np.clip(round(self.v_cruise_kph, 1), self.v_cruise_min, V_CRUISE_MAX)
 
   def update_button_timers(self, CS, enabled):
     # increment timer for buttons still pressed
