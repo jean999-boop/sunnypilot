@@ -70,14 +70,14 @@ class LongitudinalPlannerSP:
     }
 
     self.source = min(targets, key=lambda k: targets[k][0])
+ 
     self.output_v_target, self.output_a_target = targets[self.source]
     return self.output_v_target, self.output_a_target
 
-def publish_longitudinal_plan_sp(self, sm: messaging.SubMaster, pm: messaging.PubMaster) -> None:
+  def publish_longitudinal_plan_sp(self, sm: messaging.SubMaster, pm: messaging.PubMaster) -> None:
     plan_sp_send = messaging.new_message('longitudinalPlanSP')
 
     plan_sp_send.valid = sm.all_checks(service_list=['carState', 'controlsState'])
-
     longitudinalPlanSP = plan_sp_send.longitudinalPlanSP
     longitudinalPlanSP.longitudinalPlanSource = self.source
     
@@ -86,7 +86,8 @@ def publish_longitudinal_plan_sp(self, sm: messaging.SubMaster, pm: messaging.Pu
     if self.is_e2e(sm) and sm.updated['modelV2']:
   
      
-    if self.output_v_target < 1.0:
+      
+      if self.output_v_target < 1.0:
         self.output_v_target = 0.0
 
     longitudinalPlanSP.vTarget = float(self.output_v_target)
@@ -112,13 +113,8 @@ def publish_longitudinal_plan_sp(self, sm: messaging.SubMaster, pm: messaging.Pu
 
   
     
-    dec.enabled = self.dec.enabled()
-    dec.active = self.dec.active()
-
-    # Smart Cruise Control
-    smartCruiseControl = longitudinalPlanSP.smartCruiseControl
-    # Vision Control
-    sccVision = smartCruiseControl.vision
+   
+  
     sccVision.state = self.scc.vision.state
     sccVision.vTarget = float(self.scc.vision.output_v_target)
     sccVision.aTarget = float(self.scc.vision.output_a_target)
